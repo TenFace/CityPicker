@@ -1,5 +1,6 @@
 package com.zaaach.citypicker;
 
+import android.content.Context;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.text.Editable;
@@ -8,6 +9,8 @@ import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewOverlay;
+import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -23,11 +26,16 @@ import com.zaaach.citypicker.adapter.ResultListAdapter;
 import com.zaaach.citypicker.db.DBManager;
 import com.zaaach.citypicker.model.City;
 import com.zaaach.citypicker.model.LocateState;
+import com.zaaach.citypicker.utils.PinyinUtils;
 import com.zaaach.citypicker.utils.StringUtils;
 import com.zaaach.citypicker.utils.ToastUtils;
 import com.zaaach.citypicker.view.SideLetterBar;
 
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
+
+import static com.zaaach.citypicker.adapter.CityListAdapter.currentLetter;
 
 /**
  * author zaaach on 2016/1/26.
@@ -50,6 +58,13 @@ public class CityPickerActivity extends AppCompatActivity implements View.OnClic
     private DBManager dbManager;
 
     private AMapLocationClient mLocationClient;
+
+    private int position;
+
+    private TextView overlay;
+
+    private int recLen = 5;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -114,24 +129,69 @@ public class CityPickerActivity extends AppCompatActivity implements View.OnClic
         mListView = (ListView) findViewById(R.id.listview_all_city);
         mListView.setAdapter(mCityAdapter);
 
-        TextView overlay = (TextView) findViewById(R.id.tv_letter_overlay);
+        overlay = (TextView) findViewById(R.id.tv_letter_overlay);
         mLetterBar = (SideLetterBar) findViewById(R.id.side_letter_bar);
         mLetterBar.setOverlay(overlay);
         mLetterBar.setOnLetterChangedListener(new SideLetterBar.OnLetterChangedListener() {
             @Override
-            public void onLetterChanged(String letter) {
-                int position = mCityAdapter.getLetterPosition(letter);
+            public void onLetterChanged(final String letter) {
+                position = mCityAdapter.getLetterPosition(letter);
                 mListView.setSelection(position);
+            }
+        });
+        //给ListView增加滑动事件
+        mListView.setOnScrollListener(new AbsListView.OnScrollListener() {
+
+            private int firstVisibleItem, visibleItemCount, totalItemCount;
+
+            @Override
+            public void onScrollStateChanged(AbsListView view, int scrollState) {
+
+            }
+
+            @Override
+            public void onScroll(AbsListView view, int firstVisibleItem, int visibleItemCount, int totalItemCount) {
+                this.firstVisibleItem = firstVisibleItem;
+                this.visibleItemCount = visibleItemCount;
+                this.totalItemCount = totalItemCount;
+
+//                ToastUtils.showToast(CityPickerActivity.this, "我是：" + currentLetter);
+
+                overlay.setVisibility(View.VISIBLE);
+                overlay.setText(currentLetter);
+                final Timer timer = new Timer();
+                //倒计时控制中间view的显示
+                TimerTask task = new TimerTask() {
+                    @Override
+                    public void run() {
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                recLen--;
+                                if (recLen < 0) {
+                                    timer.cancel();
+                                    if (overlay.getVisibility() == View.VISIBLE) {
+                                        overlay.setVisibility(View.GONE);
+                                    }
+                                }
+                            }
+                        });
+                    }
+                };
+                timer.schedule(task, 3000, 1000);//第二个参数表示显示的时间
+
             }
         });
 
         searchBox = (EditText) findViewById(R.id.et_search);
         searchBox.addTextChangedListener(new TextWatcher() {
             @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
 
             @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
 
             @Override
             public void afterTextChanged(Editable s) {
@@ -171,7 +231,7 @@ public class CityPickerActivity extends AppCompatActivity implements View.OnClic
         backBtn.setOnClickListener(this);
     }
 
-    private void back(String city){
+    private void back(String city) {
         ToastUtils.showToast(this, "点击的城市：" + city);
 //        Intent data = new Intent();
 //        data.putExtra(KEY_PICKED_CITY, city);
@@ -181,7 +241,7 @@ public class CityPickerActivity extends AppCompatActivity implements View.OnClic
 
     @Override
     public void onClick(View v) {
-        switch (v.getId()){
+        switch (v.getId()) {
             case R.id.iv_search_clear:
                 searchBox.setText("");
                 clearBtn.setVisibility(View.GONE);

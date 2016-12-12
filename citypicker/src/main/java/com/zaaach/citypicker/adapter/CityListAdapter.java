@@ -27,12 +27,14 @@ public class CityListAdapter extends BaseAdapter {
 
     private Context mContext;
     private LayoutInflater inflater;
-    private List<City> mCities;
+    public List<City> mCities;
     private HashMap<String, Integer> letterIndexes;
     private String[] sections;
     private OnCityClickListener onCityClickListener;
     private int locateState = LocateState.LOCATING;
     private String locatedCity;
+    public static String currentLetter;
+
 
     public CityListAdapter(Context mContext, List<City> mCities) {
         this.mContext = mContext;
@@ -167,7 +169,7 @@ public class CityListAdapter extends BaseAdapter {
                 if (position >= 1){
                     final String city = mCities.get(position).getName();
                     holder.name.setText(city);
-                    String currentLetter = PinyinUtils.getFirstLetter(mCities.get(position).getPinyin());
+                    currentLetter = PinyinUtils.getFirstLetter(mCities.get(position).getPinyin());
                     String previousLetter = position >= 1 ? PinyinUtils.getFirstLetter(mCities.get(position - 1).getPinyin()) : "";
                     if (!TextUtils.equals(currentLetter, previousLetter)){
                         holder.letter.setVisibility(View.VISIBLE);
